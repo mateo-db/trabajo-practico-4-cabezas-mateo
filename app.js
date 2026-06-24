@@ -2,6 +2,7 @@
 import express from 'express';
 //importamos la funcion de arranque de mi bd 
 import { rundb } from './src/config/database.js';
+import { Movie } from './src/models/movie.model.js'
 
 const app = express()
 
