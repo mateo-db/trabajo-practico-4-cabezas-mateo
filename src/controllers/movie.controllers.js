@@ -1,4 +1,6 @@
 import express from "express";
+import { Op } from "sequelize";
+import { Movie } from "../models/movie.model";
 
 //implementamos funcion que trae todas las peliculas
 export const getAllMovies = async (req, res) => {
@@ -104,4 +106,72 @@ export const saveNewMovie = async (req, res) => {
     
     
 
+}
+
+//funcion controladora asincrona para actualizar los datos de una pelicula
+export const updateMovie = async (req, res) => {
+    const { title, genre, duration, year, synopsis } = req.body
+    //obtenemos el id que entra por el params del request y lo transformamos a number
+    const idMovieToUpdate = Number(req.params.id)
+    //verificamos si el id es un numero válido
+    if (Number.isNaN(idMovieToUpdate)) {
+        return res.status(400).json({
+            message: "Error: ID inválido"
+        })
+    }
+    
+    //aplicamos metodo findOne con la condición: donde el id de la pelicula en el catalogo, sea igual al id que entra desde el params del request
+    //se nos va a devolver un objeto, a ese objeto lo guardamos en la variable "doesMovieExist"
+    //para esperar a la resolucion de esta busqueda aplicamos un await al principio de la instruccion
+    const doesMovieExist = await Movie.findOne({ where: { id: idMovieToUpdate }})
+    //evaluamos: si la pelicula a actualizar NO EXISTE en nuestro catalogo, arrojar http status 400 y mensaje de error
+    if (!doesMovieExist) {
+        return res.status(404).json({
+            message: "Error: no se encuentró una pelicula con este ID en el catalogo"
+        })
+    }
+
+    //acá buscamos mediante el metodo findOne pero combinado con el operador op.ne ("diferente de"), esto se hace por el siguiente motivo: si un usuario quiere actualizar un dato de una pelicula, verificaremos que nuestro campo "title" sea unico, pero para que sequelize no mire la pelicula con el id que justo estamos tratando de editar y nos diga "encontré una pelicula que repite el mismo titulo (la que queremos actualizar)", usamos el operador op.ne (not equal), que hace que nuestra instrucción sea más clara: buscá si hay una pelicula CON ID DISTINTO AL QUE ENTRA DESDE EL PARAMS (la que se está intentando actualizar), en la cual su campo "title" sea igual al parametro "title" que entra desde el body
+    const duplicateTitle = await Movie.findOne({
+        where: {
+            title: title,
+            id: { [Op.ne]: idMovieToUpdate }
+        }
+    })
+
+    //si se encontró pelicula con mismo titulo pero distinto id, se arroja http status 400 y mensaje de error
+    if (duplicateTitle) {
+        return res.status(400).json("Error: el titulo de la pelicula a editar debe ser unico")
+    }
+
+    //aplicamos metodo update para actualizar con los parametros que hayan entrado desde el body a la pelicula con id que coincida con el id que haya entrado desde el params del request
+    await Movie.update(
+        { title, genre, duration, year, synopsis },
+        { where: { id: idMovieToUpdate} }
+    )
+}
+
+export const deleteMovie = async (req, res) => {
+    const idMovieToDelete = Number(req.params.id)
+
+    if (Number.isNaN(idMovieToDelete)) {
+        return res.status(400).json({
+            message: "Error: ID inválido"
+        })
+    }
+
+    const movieToDeleteExists = await Movie.findOne(idMovieToDelete)
+    if (!movieToDeleteExists) {
+        return res.status(404).json({
+            message: "Error: ID inválido"
+        })
+    }
+
+    await Movie.destroy({
+        where: { id: idMovieToDelete }
+    })
+
+    return res.status(400).json({
+        message: "Se eliminó la pelicula del catalogo con exito"
+    })
 }
