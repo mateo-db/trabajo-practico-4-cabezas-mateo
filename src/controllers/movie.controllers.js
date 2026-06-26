@@ -1,13 +1,14 @@
 import express from "express";
 import { Op } from "sequelize";
-import { Movie } from "../models/movie.model";
+import { Movie } from "../models/movie.model.js";
 
 //implementamos funcion que trae todas las peliculas
 export const getAllMovies = async (req, res) => {
     try {
         const allMovies = await Movie.findAll()
         res.status(200).json({
-            message: "Se encontraron todas las peliculas con exito"
+            message: "Se encontraron todas las peliculas con exito",
+            allMovies
         })
     } catch (error) {
         res.status(400).json({
@@ -145,10 +146,14 @@ export const updateMovie = async (req, res) => {
     }
 
     //aplicamos metodo update para actualizar con los parametros que hayan entrado desde el body a la pelicula con id que coincida con el id que haya entrado desde el params del request
-    await Movie.update(
+    const newUpdate = await Movie.update(
         { title, genre, duration, year, synopsis },
         { where: { id: idMovieToUpdate} }
     )
+    res.status(200).json({
+        message: "Se editó la pelicula del catalogo exitosamente",
+        newUpdate
+    })
 }
 
 export const deleteMovie = async (req, res) => {
@@ -160,7 +165,7 @@ export const deleteMovie = async (req, res) => {
         })
     }
 
-    const movieToDeleteExists = await Movie.findOne(idMovieToDelete)
+    const movieToDeleteExists = await Movie.findByPk(idMovieToDelete)
     if (!movieToDeleteExists) {
         return res.status(404).json({
             message: "Error: ID inválido"
@@ -171,7 +176,8 @@ export const deleteMovie = async (req, res) => {
         where: { id: idMovieToDelete }
     })
 
-    return res.status(400).json({
-        message: "Se eliminó la pelicula del catalogo con exito"
+    return res.status(200).json({
+        message: "Se eliminó la pelicula del catalogo con exito",
+        movieToDeleteExists
     })
 }
